@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mathurapur Payment Portal</title>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    
     <style>
         body { font-family: 'Segoe UI', sans-serif; background: #f0f2f5; display: flex; justify-content: center; padding: 20px; margin: 0; }
         .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 380px; }
@@ -60,6 +62,7 @@
 <script>
     // ⚠️ APNA GOOGLE SCRIPT URL YAHAN DALEIN
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyG2iXbqMupDVg7Pi_KKLj3iVuQiz4ShImch4rBvDyFuMSiz43ewWYFXzwjvQZFr4hiOQ/exec";
+    
     // 1. Names load karne ka function (Sheet1 se)
     async function fetchNames() {
         try {
@@ -68,7 +71,7 @@
             const dropdown = document.getElementById('userNames');
             
             if (data.length > 0) {
-                dropdown.innerHTML = data.map(n => `<option value="${n}">${n}</option>`).join('');
+                dropdown.innerHTML = '<option value="">SELECT NAME </option>' + data.map(n => `<option value="${n}">${n}</option>`).join('');
             } else {
                 dropdown.innerHTML = '<option value="">No Names Found</option>';
             }
@@ -99,8 +102,14 @@
         const amount = calculateTotal();
         const selectedUser = document.getElementById('userNames').value;
 
-        if (!selectedUser || selectedUser === "Names Loading...") {
-            alert("Pehle naam select karein!");
+        // SweetAlert Validation
+        if (!selectedUser || selectedUser === "") {
+            Swal.fire({
+                icon: 'warning',
+                title: 'Opps...',
+                text: 'Kripya pehle naam select karein!',
+                confirmButtonColor: '#1a73e8'
+            });
             return;
         }
 
@@ -117,11 +126,8 @@
         });
 
         // ⭐ UNIVERSAL UPI LINK
-        // pa = UPI ID, pn = Banking Name (NISHAT BANU)
         const upiID = "7549976381@kotak";
-        const payeeName = "NISHAT%20BANU"; // %20 space ke liye hai
-        
-        // Yeh link sabhi apps (GPay, PhonePe, Paytm) ka option dikhayega
+        const payeeName = "NISHAT%20BANU"; 
         const upiUrl = `upi://pay?pa=${upiID}&pn=${payeeName}&am=${amount}&cu=INR&tn=MathurapurPayment`;
 
         // Payment app kholna
