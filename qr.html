@@ -20,14 +20,19 @@
         .total-box label { display: block; margin: 0; color: #1a73e8; font-size: 12px; text-transform: uppercase; font-weight: bold; }
         .total-box span { font-size: 32px; font-weight: 800; color: #1a73e8; }
 
-        /* QR Code Styling */
-        #qr-container { text-align: center; margin-top: 20px; display: none; padding: 15px; border: 2px dashed #1a73e8; border-radius: 10px; background: #fff; }
-        #qr-container img { width: 200px; height: 200px; margin-bottom: 10px; }
-        .qr-text { font-size: 13px; color: #555; margin-bottom: 10px; display: block; }
-
         button { width: 100%; background: #28a745; color: white; border: none; padding: 16px; border-radius: 8px; font-size: 18px; font-weight: bold; margin-top: 25px; cursor: pointer; transition: 0.3s; }
         button:hover { background: #218838; }
-        
+
+        /* Full Screen QR Modal */
+        #qr-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
+        }
+        #qr-overlay img { width: 80%; max-width: 300px; margin-bottom: 20px; border: 5px solid #1a73e8; border-radius: 10px; padding: 10px; }
+        #qr-overlay h2 { color: #1a73e8; margin-bottom: 10px; }
+        .close-qr { background: #d93025; padding: 10px 30px; margin-top: 20px; }
+
         #status { font-size: 12px; color: #d93025; text-align: center; margin-top: 10px; font-weight: bold; }
     </style>
 </head>
@@ -60,14 +65,19 @@
         <span>₹<span id="finalTotal">7</span></span>
     </div>
 
-    <div id="qr-container">
-        <span class="qr-text">Is QR Code ko scan karein:</span>
-        <img id="qr-image" src="" alt="UPI QR Code">
-        <p style="font-weight: bold; color: #1a73e8;">Amount: ₹<span id="qr-amount-text">0</span></p>
-    </div>
-
     <button id="payBtn" onclick="processPayment()">PAY NOW</button>
     <div id="status"></div>
+</div>
+
+<div id="qr-overlay">
+    <h2>Scan to Pay</h2>
+    <p id="qr-user-name" style="font-weight: bold; color: #555;"></p>
+    <img id="qr-image" src="" alt="UPI QR Code">
+    <div class="total-box" style="width: 200px;">
+        <label>Total Amount</label>
+        <span id="qr-amount-display">₹0</span>
+    </div>
+    <button class="close-qr" onclick="closeQR()">CLOSE QR</button>
 </div>
 
 <script>
@@ -92,8 +102,6 @@
         const other = document.getElementById('otherAmount').value;
         let total = (other !== "" && parseInt(other) > 0) ? parseInt(other) : (rate * count);
         document.getElementById('finalTotal').innerText = total;
-        // QR Code hide kar dete hain jab amount change ho taaki purana QR scan na ho jaye
-        document.getElementById('qr-container').style.display = 'none';
         return total;
     }
 
@@ -106,7 +114,7 @@
             return;
         }
 
-        // Google Sheet update call
+        // Google Sheet update
         fetch(SCRIPT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -118,35 +126,21 @@
             })
         });
 
-        // --- QR CODE GENERATION ---
+        // UPI and QR Logic
         const upiID = "7549976381@kotak";
         const payeeName = "NISHAT BANU"; 
-        const upiUrl = `upi://pay?pa=${upiID}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=MathurapurPayment`;
+        const upiUrl = `upi://pay?pa=${upiID}&pn=${encodeURIComponent(payeeName)}&am=${amount}&cu=INR&tn=PaymentBy_${selectedUser.replace(/\s/g, '')}`;
+        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(upiUrl)}`;
         
-        // QR Server API ka use karke QR generate karna
-        const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(upiUrl)}`;
-        
-        const qrContainer = document.getElementById('qr-container');
-        const qrImage = document.getElementById('qr-image');
-        const qrAmtText = document.getElementById('qr-amount-text');
+        // Show QR Full Screen
+        document.getElementById('qr-image').src = qrImgUrl;
+        document.getElementById('qr-amount-display').innerText = "₹" + amount;
+        document.getElementById('qr-user-name').innerText = selectedUser;
+        document.getElementById('qr-overlay').style.display = 'flex';
+    }
 
-        qrImage.src = qrImgUrl;
-        qrAmtText.innerText = amount;
-        qrContainer.style.display = 'block'; // QR dikhayein
-        
-        // Mobile users ke liye direct app kholne ka option (optional)
-        Swal.fire({
-            title: 'QR Code Tayar Hai',
-            text: "Aap niche diye gaye QR ko scan karein ya 'Open App' par click karein.",
-            icon: 'success',
-            showCancelButton: true,
-            confirmButtonText: 'Open UPI App',
-            cancelButtonText: 'Close'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                window.location.href = upiUrl;
-            }
-        });
+    function closeQR() {
+        document.getElementById('qr-overlay').style.display = 'none';
     }
 </script>
 
